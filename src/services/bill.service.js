@@ -19,6 +19,10 @@ function buildReceiptText(bill) {
   return billingService.buildPrintableReceipt({
     billId: bill.id,
     restaurantName: "Restaurant Billing",
+    orderType: relatedOrder?.orderType || "dine_in",
+    parcelLabel: relatedOrder?.parcelLabel || null,
+    customerName: relatedOrder?.customerName || null,
+    customerPhone: relatedOrder?.customerPhone || null,
     tableNumber: relatedOrder?.tableId?.tableNumber || null,
     waiterName: relatedOrder?.waiterId?.name || generatedBy,
     items: bill.items || [],
@@ -141,10 +145,12 @@ async function generateBill({ actor, payload }) {
   }
 
   const previousOrderSnapshot = await populateOrder(order.id);
-  const previousTableSnapshot = await tableService.getTableById({
-    restaurantId: actor.restaurantId,
-    tableId: order.tableId
-  });
+  const previousTableSnapshot = order.tableId
+    ? await tableService.getTableById({
+        restaurantId: actor.restaurantId,
+        tableId: order.tableId
+      })
+    : null;
 
   const billingInput = billingService.normalizeBillingInput({
     taxRate: payload.taxRate,
@@ -181,12 +187,14 @@ async function generateBill({ actor, payload }) {
   order.lockedAt = new Date();
   await order.save();
 
-  const updatedTable = await tableService.setTableStatus({
-    tableId: order.tableId,
-    restaurantId: actor.restaurantId,
-    status: tableService.TABLE_STATUS.BILLING,
-    currentOrderId: order.id
-  });
+  const updatedTable = order.tableId
+    ? await tableService.setTableStatus({
+        tableId: order.tableId,
+        restaurantId: actor.restaurantId,
+        status: tableService.TABLE_STATUS.BILLING,
+        currentOrderId: order.id
+      })
+    : null;
 
   const populatedBill = await hydrateBillReceipt(bill.id);
   const updatedOrderSnapshot = await populateOrder(order.id);
@@ -200,11 +208,13 @@ async function generateBill({ actor, payload }) {
     previousOrder: previousOrderSnapshot,
     order: updatedOrderSnapshot
   });
-  realtimeService.emitTableUpdated({
-    restaurantId: actor.restaurantId,
-    previousTable: previousTableSnapshot,
-    table: updatedTable
-  });
+  if (previousTableSnapshot && updatedTable) {
+    realtimeService.emitTableUpdated({
+      restaurantId: actor.restaurantId,
+      previousTable: previousTableSnapshot,
+      table: updatedTable
+    });
+  }
 
   return populatedBill;
 }

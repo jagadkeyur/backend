@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 
+const { ORDER_TYPES } = require("../constants/order-types");
 const { ORDER_STATUS } = require("../constants/statuses");
 const orderItemSchema = require("./OrderItem");
 
@@ -16,10 +17,33 @@ const orderSchema = new mongoose.Schema(
       trim: true,
       default: null
     },
+    orderType: {
+      type: String,
+      enum: Object.values(ORDER_TYPES),
+      default: ORDER_TYPES.DINE_IN
+    },
     tableId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Table",
-      required: true
+      required() {
+        return this.orderType !== ORDER_TYPES.PARCEL;
+      },
+      default: null
+    },
+    parcelLabel: {
+      type: String,
+      trim: true,
+      default: null
+    },
+    customerName: {
+      type: String,
+      trim: true,
+      default: null
+    },
+    customerPhone: {
+      type: String,
+      trim: true,
+      default: null
     },
     items: {
       type: [orderItemSchema],
@@ -50,6 +74,15 @@ const orderSchema = new mongoose.Schema(
       default: false
     },
     lockedAt: {
+      type: Date,
+      default: null
+    },
+    mergedIntoOrderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+      default: null
+    },
+    mergedAt: {
       type: Date,
       default: null
     }

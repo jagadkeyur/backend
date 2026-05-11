@@ -12,6 +12,11 @@ router.get(
   tableController.getTables
 );
 router.post(
+  "/merge",
+  authorize(ROLES.ADMIN, ROLES.CASHIER),
+  tableController.mergeTables
+);
+router.post(
   "/:id/release",
   authorize(ROLES.ADMIN, ROLES.CASHIER),
   tableController.releaseTable

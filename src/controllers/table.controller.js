@@ -1,4 +1,5 @@
 const asyncHandler = require("../middleware/async-handler");
+const orderService = require("../services/order.service");
 const tableService = require("../services/table.service");
 
 const getTables = asyncHandler(async (req, res) => {
@@ -23,7 +24,22 @@ const releaseTable = asyncHandler(async (req, res) => {
   });
 });
 
+const mergeTables = asyncHandler(async (req, res) => {
+  const result = await orderService.mergeTableOrders({
+    actor: req.user,
+    sourceTableId: req.body.sourceTableId,
+    targetTableId: req.body.targetTableId
+  });
+
+  res.status(200).json({
+    success: true,
+    message: `Table ${result.sourceTable.tableNumber} merged into Table ${result.targetTable.tableNumber}`,
+    data: result
+  });
+});
+
 module.exports = {
   getTables,
-  releaseTable
+  releaseTable,
+  mergeTables
 };

@@ -13,7 +13,7 @@ const env = {
   jwtSecret: process.env.JWT_SECRET || "development-secret-change-me",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "12h",
   corsOrigin: process.env.CORS_ORIGIN || "http://localhost:5173",
-  defaultGstPercent: Number(process.env.DEFAULT_GST_PERCENT || 5),
+  defaultGstPercent: Number(process.env.DEFAULT_GST_PERCENT || 0),
 };
 
 module.exports = env;

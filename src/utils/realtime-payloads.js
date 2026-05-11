@@ -55,15 +55,21 @@ function normalizeOrderRealtime(order) {
 
   return {
     id: toId(order),
+    orderType: order.orderType || "dine_in",
     tableId: toId(order.tableId),
     tableNumber: table?.tableNumber ?? order.tableNumber ?? null,
     waiterId: toId(order.waiterId),
     waiterName: waiter?.name || order.waiterName || "Waiter",
+    parcelLabel: order.parcelLabel || null,
+    customerName: order.customerName || null,
+    customerPhone: order.customerPhone || null,
     status: order.status || "preparing",
     items,
     itemCount: items.length,
     total: Number(order.total || 0),
     isLocked: Boolean(order.isLocked),
+    mergedIntoOrderId: toId(order.mergedIntoOrderId),
+    mergedAt: toIsoDate(order.mergedAt),
     createdAt: toIsoDate(order.createdAt),
     updatedAt: toIsoDate(order.updatedAt),
     lockedAt: toIsoDate(order.lockedAt)
@@ -83,8 +89,12 @@ function normalizeBillRealtime(bill) {
   return {
     id: toId(bill),
     orderId: relatedOrder?.id || toId(bill.orderId),
+    orderType: relatedOrder?.orderType || bill.orderType || "dine_in",
     tableId: relatedOrder?.tableId || toId(bill.tableId),
     tableNumber: relatedOrder?.tableNumber || bill.tableNumber || null,
+    parcelLabel: relatedOrder?.parcelLabel || bill.parcelLabel || null,
+    customerName: relatedOrder?.customerName || bill.customerName || null,
+    customerPhone: relatedOrder?.customerPhone || bill.customerPhone || null,
     subtotal: Number(bill.subtotal || bill.total || 0),
     total: Number(bill.total || 0),
     taxableAmount: Number(bill.taxableAmount || 0),
@@ -136,13 +146,19 @@ function buildOrderUpdatedData(previousOrder, nextOrder) {
   const previous = normalizeOrderRealtime(previousOrder);
   const current = normalizeOrderRealtime(nextOrder);
   const patch = buildPatch(previous, current, [
+    "orderType",
     "tableId",
     "tableNumber",
+    "parcelLabel",
+    "customerName",
+    "customerPhone",
     "status",
     "items",
     "itemCount",
     "total",
     "isLocked",
+    "mergedIntoOrderId",
+    "mergedAt",
     "lockedAt",
     "updatedAt"
   ]);

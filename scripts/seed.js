@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const connectDatabase = require("../src/config/database");
+const { ORDER_TYPES } = require("../src/constants/order-types");
 const ROLES = require("../src/constants/roles");
 const { ORDER_STATUS, TABLE_STATUS } = require("../src/constants/statuses");
 const Bill = require("../src/models/Bill");
@@ -68,6 +69,18 @@ const demoOrders = [
       { name: "Masala Dosa", qty: 2, price: 160 },
       { name: "Filter Coffee", qty: 2, price: 80 },
       { name: "Gulab Jamun", qty: 1, price: 110 }
+    ]
+  },
+  {
+    clientOrderId: "demo-order-parcel-open",
+    orderType: ORDER_TYPES.PARCEL,
+    parcelLabel: "PARCEL-DEMO-1",
+    customerName: "Takeaway Guest",
+    customerPhone: "9876543210",
+    status: ORDER_STATUS.READY,
+    items: [
+      { name: "Tomato Soup", qty: 2, price: 120 },
+      { name: "Jeera Rice", qty: 1, price: 150 }
     ]
   }
 ];
@@ -192,7 +205,11 @@ async function ensureDemoBill({ cashier, order, table, waiter, billingConfig }) 
   bill.receiptText = billingService.buildPrintableReceipt({
     billId: bill.id,
     restaurantName: "Restaurant Billing",
-    tableNumber: table.tableNumber,
+    orderType: order.orderType,
+    parcelLabel: order.parcelLabel,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    tableNumber: table?.tableNumber || null,
     waiterName: waiter.name,
     items: bill.items,
     subtotal: bill.subtotal ?? bill.total,
@@ -221,12 +238,16 @@ async function upsertDemoOrdersAndBills() {
   }
 
   for (const demoOrder of demoOrders) {
-    const table = await Table.findOne({
-      restaurantId,
-      tableNumber: demoOrder.tableNumber
-    });
+    const orderType = demoOrder.orderType || ORDER_TYPES.DINE_IN;
+    const table =
+      orderType === ORDER_TYPES.DINE_IN
+        ? await Table.findOne({
+            restaurantId,
+            tableNumber: demoOrder.tableNumber
+          })
+        : null;
 
-    if (!table) {
+    if (orderType === ORDER_TYPES.DINE_IN && !table) {
       continue;
     }
 
@@ -239,7 +260,11 @@ async function upsertDemoOrdersAndBills() {
       order = await Order.create({
         restaurantId,
         clientOrderId: demoOrder.clientOrderId,
-        tableId: table.id,
+        orderType,
+        tableId: table?.id || null,
+        parcelLabel: demoOrder.parcelLabel || null,
+        customerName: demoOrder.customerName || null,
+        customerPhone: demoOrder.customerPhone || null,
         items: demoOrder.items,
         status: demoOrder.status,
         total: calculateOrderTotal(demoOrder.items),
@@ -260,9 +285,11 @@ async function upsertDemoOrdersAndBills() {
       order = await Order.findById(order.id);
     }
 
-    table.currentOrderId = order.id;
-    table.status = deriveDemoTableStatus(order);
-    await table.save();
+    if (table) {
+      table.currentOrderId = order.id;
+      table.status = deriveDemoTableStatus(order);
+      await table.save();
+    }
   }
 }
 
@@ -278,6 +305,7 @@ async function seed() {
   console.log("Cashier: cashier@demo.com / Cashier@123");
   console.log("Waiter: waiter@demo.com / Waiter@123");
   console.log("Demo tables: 1 active, 2 served, 3 billed");
+  console.log("Demo parcel orders: 1 open");
   console.log(`Demo items: ${seedItems.length}`);
   process.exit(0);
 }

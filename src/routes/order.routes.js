@@ -9,7 +9,7 @@ router.use(authenticate);
 
 router.post(
   "/",
-  authorize(ROLES.ADMIN, ROLES.WAITER),
+  authorize(ROLES.ADMIN, ROLES.WAITER, ROLES.CASHIER),
   orderController.createOrder
 );
 

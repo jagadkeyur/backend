@@ -108,14 +108,17 @@ function calculateBillSummary({ items, taxRate, discountType, discountValue }) {
   const taxableAmount = roundMoney(Math.max(subtotal - discountAmount, 0));
   const taxAmount = roundMoney((taxableAmount * taxRate) / 100);
   const finalAmount = roundMoney(taxableAmount + taxAmount);
-  const taxBreakdown = [
-    {
-      label: "GST",
-      rate: roundMoney(taxRate),
-      taxableAmount,
-      amount: taxAmount
-    }
-  ];
+  const taxBreakdown =
+    taxRate > 0 || taxAmount > 0
+      ? [
+          {
+            label: "GST",
+            rate: roundMoney(taxRate),
+            taxableAmount,
+            amount: taxAmount
+          }
+        ]
+      : [];
 
   return {
     items: normalizedItems,
@@ -135,6 +138,10 @@ function calculateBillSummary({ items, taxRate, discountType, discountValue }) {
 function buildPrintableReceipt({
   billId,
   restaurantName = "Restaurant Billing",
+  orderType,
+  parcelLabel,
+  customerName,
+  customerPhone,
   tableNumber,
   waiterName,
   items = [],
@@ -166,6 +173,22 @@ function buildPrintableReceipt({
     lines.push(`Table: ${tableNumber}`);
   }
 
+  if (orderType === "parcel") {
+    lines.push(`Order Type: Parcel`);
+  }
+
+  if (parcelLabel) {
+    lines.push(`Parcel Ref: ${parcelLabel}`);
+  }
+
+  if (customerName) {
+    lines.push(`Customer: ${customerName}`);
+  }
+
+  if (customerPhone) {
+    lines.push(`Phone: ${customerPhone}`);
+  }
+
   if (waiterName) {
     lines.push(`Waiter: ${waiterName}`);
   }
@@ -192,9 +215,13 @@ function buildPrintableReceipt({
   }
 
   lines.push(padReceipt("Taxable Total", roundMoney(taxableAmount).toFixed(2)));
-  lines.push(
-    padReceipt(`GST (${roundMoney(taxRate)}%)`, roundMoney(tax).toFixed(2))
-  );
+
+  if (taxRate > 0 || tax > 0) {
+    lines.push(
+      padReceipt(`GST (${roundMoney(taxRate)}%)`, roundMoney(tax).toFixed(2))
+    );
+  }
+
   lines.push(buildDivider());
   lines.push(padReceipt("Grand Total", roundMoney(finalAmount).toFixed(2)));
   lines.push(buildDivider());
